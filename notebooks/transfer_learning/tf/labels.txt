@@ -1,0 +1,10 @@
+aurora
+cupola
+day
+dock
+moon
+night
+stars
+structure
+sunrise
+volcano

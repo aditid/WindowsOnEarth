@@ -3,3 +3,8 @@ BUSampleDataSet
 notebooks/.ipynb_checkpoints
 WinEarthPhotosByKeyword
 *.ipynb_checkpoints
+
+!notebooks/transfer_learning/tf_files/
+notebooks/transfer_learning/tf_files/*
+!notebooks/transfer_learning/tf_files/images/
+!notebooks/transfer_learning/tf_files/multi_label_images/
