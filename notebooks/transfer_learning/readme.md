@@ -9,5 +9,6 @@ python -m tf.retrain \
   --output_graph=tf_files/retrained_graph.pb \
   --output_labels=tf_files/retrained_labels.txt \
   --architecture=inception_v3 \
-  --image_dir=images/train
+  --image_dir=tf_files/images2
+  --labels=tf_files/labels.txt
 ```
