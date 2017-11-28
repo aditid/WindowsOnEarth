@@ -1,10 +1,14 @@
 aurora
+clouds
 cupola
 day
 dock
+hurricane
 moon
 night
+solar_panels
 stars
 structure
 sunrise
+unknown
 volcano
