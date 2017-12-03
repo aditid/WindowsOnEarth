@@ -633,7 +633,7 @@ def get_random_distorted_bottlenecks(
     Returns:
       List of bottleneck arrays and their corresponding ground truths.
     """
-    class_count = 2
+    class_count = len(image_lists.keys())
     bottlenecks = []
     ground_truths = []
     for unused_i in range(how_many):
