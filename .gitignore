@@ -5,3 +5,13 @@ WinEarthPhotosByKeyword
 *.ipynb_checkpoints
 BU10000SetAB
 NumpyImages
+*.pyc
+__pycache__/
+
+notebooks/transfer_learning/results.txt
+!notebooks/transfer_learning/tf_files/
+notebooks/transfer_learning/tf_files/*
+!notebooks/transfer_learning/tf_files/labels.txt
+!notebooks/transfer_learning/tf_files/images/
+!notebooks/transfer_learning/tf_files/images2/
+!notebooks/transfer_learning/tf_files/images2/multi_label_images/
