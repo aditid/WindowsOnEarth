@@ -123,7 +123,7 @@ MULTI_IMAGE_DIR = 'multi_label_images'
 MAX_NUM_IMAGES_PER_CLASS = 2 ** 27 - 1  # ~134M
 
 
-def create_image_lists(image_dir, testing_percentage, validation_percentage):
+def create_image_lists(image_dir, testing_percentage, validation_percentage, label):
     """Builds a list of training images from the file system.
 
     Analyzes the sub folders in the image directory, splits them into stable
@@ -169,42 +169,53 @@ def create_image_lists(image_dir, testing_percentage, validation_percentage):
             tf.logging.warning(
                 'WARNING: Folder {} has more than {} images. Some images will '
                 'never be selected.'.format(dir_name, MAX_NUM_IMAGES_PER_CLASS))
-        label_name = re.sub(r'[^a-z0-9]+', ' ', dir_name.lower())
+        # label_name = re.sub(r'[^a-z0-9]+', ' ', dir_name.lower())
         training_images = []
         testing_images = []
         validation_images = []
         # TODO Fix distribution of images
-        for file_name in file_list:
-            base_name = os.path.basename(file_name)
-            # We want to ignore anything after '_nohash_' in the file name when
-            # deciding which set to put an image in, the data set creator has a way of
-            # grouping photos that are close variations of each other. For example
-            # this is used in the plant disease data set to group multiple pictures of
-            # the same leaf.
-            hash_name = re.sub(r'_nohash_.*$', '', file_name)
-            # This looks a bit magical, but we need to decide whether this file should
-            # go into the training, testing, or validation sets, and we want to keep
-            # existing files in the same set even if more files are subsequently
-            # added.
-            # To do that, we need a stable way of deciding based on just the file name
-            # itself, so we do a hash of that and then use that to generate a
-            # probability value that we use to assign it.
-            hash_name_hashed = hashlib.sha1(compat.as_bytes(hash_name)).hexdigest()
-            percentage_hash = ((int(hash_name_hashed, 16) %
-                                (MAX_NUM_IMAGES_PER_CLASS + 1)) *
-                               (100.0 / MAX_NUM_IMAGES_PER_CLASS))
-            if percentage_hash < validation_percentage:
-                validation_images.append(base_name)
-            elif percentage_hash < (testing_percentage + validation_percentage):
-                testing_images.append(base_name)
+        for i in range(2):
+            if i == 0:
+                label_name = label
             else:
-                training_images.append(base_name)
-        result[label_name] = {
-            'dir': dir_name,
-            'training': training_images,
-            'testing': testing_images,
-            'validation': validation_images,
-        }
+                label_name = 'other'
+            for file_name in file_list:
+                with open(file_name + '.txt') as f:
+                    labels = f.read().splitlines()
+                if label_name == label and label not in labels:
+                    continue
+                elif label_name == 'other' and label in labels:
+                    continue
+                base_name = os.path.basename(file_name)
+                # We want to ignore anything after '_nohash_' in the file name when
+                # deciding which set to put an image in, the data set creator has a way of
+                # grouping photos that are close variations of each other. For example
+                # this is used in the plant disease data set to group multiple pictures of
+                # the same leaf.
+                hash_name = re.sub(r'_nohash_.*$', '', file_name)
+                # This looks a bit magical, but we need to decide whether this file should
+                # go into the training, testing, or validation sets, and we want to keep
+                # existing files in the same set even if more files are subsequently
+                # added.
+                # To do that, we need a stable way of deciding based on just the file name
+                # itself, so we do a hash of that and then use that to generate a
+                # probability value that we use to assign it.
+                hash_name_hashed = hashlib.sha1(compat.as_bytes(hash_name)).hexdigest()
+                percentage_hash = ((int(hash_name_hashed, 16) %
+                                    (MAX_NUM_IMAGES_PER_CLASS + 1)) *
+                                   (100.0 / MAX_NUM_IMAGES_PER_CLASS))
+                if percentage_hash < validation_percentage:
+                    validation_images.append(base_name)
+                elif percentage_hash < (testing_percentage + validation_percentage):
+                    testing_images.append(base_name)
+                else:
+                    training_images.append(base_name)
+            result[label_name] = {
+                'dir': label_name,
+                'training': training_images,
+                'testing': testing_images,
+                'validation': validation_images,
+            }
     return result
 
 
@@ -267,7 +278,8 @@ def get_image_path(image_lists, label_name, index, image_dir, category):
                          label_name, category)
     mod_index = index % len(category_list)
     base_name = category_list[mod_index]
-    sub_dir = label_lists['dir']
+    # sub_dir = label_lists['dir']
+    sub_dir = MULTI_IMAGE_DIR
     full_path = os.path.join(image_dir, sub_dir, base_name)
     return full_path
 
@@ -439,7 +451,8 @@ def get_or_create_bottleneck(sess, image_lists, label_name, index, image_dir,
       Numpy array of values produced by the bottleneck layer for the image.
     """
     label_lists = image_lists[label_name]
-    sub_dir = label_lists['dir']
+    # sub_dir = label_lists['dir']
+    sub_dir = MULTI_IMAGE_DIR
     sub_dir_path = os.path.join(bottleneck_dir, sub_dir)
     ensure_dir_exists(sub_dir_path)
     bottleneck_path = get_bottleneck_path(image_lists, label_name, index,
@@ -1046,7 +1059,7 @@ def main(_):
         CACHED_GROUND_TRUTH_VECTORS.clear()
         # Look at the folder structure, and create lists of all the images.
         image_lists = create_image_lists(FLAGS.image_dir, FLAGS.testing_percentage,
-                                         FLAGS.validation_percentage)
+                                         FLAGS.validation_percentage, label)
         # class_count = len(image_lists.keys())
         if class_count == 0:
             tf.logging.error('No valid folders of images found at ' + FLAGS.image_dir)
