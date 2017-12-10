@@ -1,41 +1,80 @@
 import tensorflow as tf
-import sys
+import argparse
+import os
+import glob
+import ntpath
 
-# change this as you see fit
-image_path = sys.argv[1]
+FLAGS = None
 
-# Read in the image_data
-image_data = tf.gfile.FastGFile(image_path, 'rb').read()
 
-# Loads label file, strips off carriage return
-label_lines = [line.rstrip() for line
-               in tf.gfile.GFile("tf_files/labels.txt")]
+def run(model):
+    # Unpersists graph from file
+    with tf.gfile.FastGFile(model, 'rb') as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+        _ = tf.import_graph_def(graph_def, name='')
 
-# Unpersists graph from file
-with tf.gfile.FastGFile("tf_files/retrained_graph.pb", 'rb') as f:
-    graph_def = tf.GraphDef()
-    graph_def.ParseFromString(f.read())
-    _ = tf.import_graph_def(graph_def, name='')
+    for image in images:
+        # Read in the image_data
+        image_data = tf.gfile.FastGFile(image, 'rb').read()
 
-with tf.Session() as sess:
-    # Feed the image_data as input to the graph and get first prediction
-    softmax_tensor = sess.graph.get_tensor_by_name('final_result:0')
+        # Get model label name
+        model_name = ntpath.basename(model)
+        label = model_name.split('_')[0]
 
-    predictions = sess.run(softmax_tensor,
-                           {'DecodeJpeg/contents:0': image_data})
+        with tf.Session() as sess:
+            # Feed the image_data as input to the graph and get first prediction
+            softmax_tensor = sess.graph.get_tensor_by_name('final_result:0')
 
-    # Sort to show labels of first prediction in order of confidence
-    top_k = predictions[0].argsort()[-len(predictions[0]):][::-1]
+            predictions = sess.run(softmax_tensor,
+                                   {'DecodeJpeg/contents:0': image_data})
 
-    for node_id in top_k:
-        human_string = label_lines[node_id]
-        score = predictions[0][node_id]
-        print('%s (score = %.5f)' % (human_string, score))
+            # Sort to show labels of first prediction in order of confidence
+            top_k = predictions[0].argsort()[-len(predictions[0]):][::-1]
 
-    filename = "results.txt"
-    with open(filename, 'a+') as f:
-        f.write('\n**%s**\n' % (image_path))
-        for node_id in top_k:
-            human_string = label_lines[node_id]
-            score = predictions[0][node_id]
-            f.write('%s (score = %.5f)\n' % (human_string, score))
+            # for node_id in top_k:
+            human_string = label
+            score = predictions[0][0]
+            print('%s (score = %.5f)' % (human_string, score))
+
+            filename = 'results.txt'
+            with open(filename, 'a+') as f:
+                f.write('\n**{0}**\n'.format(image))
+                # for node_id in top_k:
+                human_string = label
+                score = predictions[0][0]
+                f.write('%s (score = %.5f)\n' % (human_string, score))
+
+
+def get_models():
+    files = []
+    for file in glob.glob(os.path.join(FLAGS.model_dir, '*.pb')):
+        files.append(file)
+    return files
+
+
+def get_images():
+    files = []
+    extensions = ['jpg', 'jpeg']
+    for extension in extensions:
+        for file in glob.glob(os.path.join(FLAGS.image_dir, '*.' + extension)):
+            files.append(file)
+    return files
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--image_dir", help="directory of images to be processed")
+    parser.add_argument("--model_dir", help="directory of graphs/models to be executed")
+    FLAGS = parser.parse_args()
+
+    if FLAGS.model_dir:
+        model_file = FLAGS.model_dir
+    if FLAGS.image_dir:
+        file_name = FLAGS.image_dir
+
+    models = get_models()
+    images = get_images()
+
+    for model in models:
+        run(model)
