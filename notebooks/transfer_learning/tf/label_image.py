@@ -35,7 +35,7 @@ def run(model):
             # for node_id in top_k:
             human_string = label
             score = predictions[0][0]
-            print('%s (score = %.5f)' % (human_string, score))
+            print('%s - %s (score = %.5f)' % (image, human_string, score))
 
             filename = 'results.txt'
             with open(filename, 'a+') as f:
